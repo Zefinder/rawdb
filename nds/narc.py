@@ -3,25 +3,25 @@ from array import *
 
 class BTAF:
     def __init__(self, rawdata):
-        if len(rawdata)>0:           
+        if len(rawdata)>0:
             self.magic = rawdata[:4]
             self.header = unpack("II", rawdata[4:12])
-            if self.magic != "BTAF":
-                raise NameError, "BTAF tag not found"
+            if self.magic != b"BTAF":
+                raise NameError("BTAF tag not found")
         else:
-            self.magic = "BTAF"
+            self.magic = b"BTAF"
             self.header = (12, 0)
         self.table = []
         rawdata=rawdata[12:]
         if len(rawdata)>0:
-            for i in range(self.getEntryNum()):            
-                self.table.append(unpack("II", rawdata[i*8:i*8+8]))      
+            for i in range(self.getEntryNum()):
+                self.table.append(unpack("II", rawdata[i*8:i*8+8]))
     def getSize(self):
         return self.header[0]
     def getEntryNum(self):
         return self.header[1]
     def toString(self, gmif):
-        ret = "BTAF"+pack("II", self.header[0], self.header[1])
+        ret = b"BTAF"+pack("II", self.header[0], self.header[1])
         for ofs, l in gmif.getEntries():
             ret += pack("II", ofs, ofs+l)
         return ret
@@ -31,13 +31,13 @@ class BTNF:
         if len(rawdata)>0:
             self.magic = rawdata[:4]
             self.header = unpack("IIHH", rawdata[4:0x10])
-            if self.magic != "BTNF":
-                raise NameError, "BTNF tag not found"
+            if self.magic != b"BTNF":
+                raise NameError("BTNF tag not found")
         else:
-            self.magic = "BTNF"
+            self.magic = b"BTNF"
             self.header = (16, 4, 0, 1)
     def toString(self):
-        ret = "BTNF"
+        ret = b"BTNF"
         ret += pack("IIHH", self.header[0], self.header[1], self.header[2],
             self.header[3])
         return ret
@@ -46,10 +46,10 @@ class GMIF:
         if len(rawdata)>0:
             self.magic = rawdata[:4]
             self.size = unpack("I", rawdata[4:8])[0]
-            if self.magic != "GMIF":
-                raise NameError, "GMIF tag not found"         
+            if self.magic != b"GMIF":
+                raise NameError("GMIF tag not found")
         else:
-            self.magic = "GMIF"
+            self.magic = b"GMIF"
             self.size = 8
         self.files = []
         for ofs in t:
@@ -65,24 +65,24 @@ class GMIF:
             of += l
         return ret
     def toString(self):
-        ret = ""
+        ret = b""
         for f in self.files:
             ret += f
             l = len(f)
             while l%4:
                 l += 1
-                ret += "\x00"
+                ret += b"\x00"
         self.size = len(ret)
-        return "GMIF"+pack("I", self.size)+ret
+        return b"GMIF"+pack(b"I", self.size)+ret
 class NARC:
     def __init__(self, rawdata):
         if len(rawdata)>0:
             self.magic = rawdata[:4]
-            if self.magic != "NARC":
-                raise NameError, "NARC tag not found"
-            self.header = unpack("IIHH", rawdata[4:16])
+            if self.magic != b"NARC":
+                raise NameError("NARC tag not found")
+            self.header = unpack(b"IIHH", rawdata[4:16])
         else:
-            self.magic = "NARC"
+            self.magic = b"NARC"
             self.header = (0x0100FFFE, 0x10+12+8 + 0x10, 0x10, 3)
         rawdata= rawdata[16:]
         self.btaf = BTAF(rawdata)
@@ -91,12 +91,13 @@ class NARC:
         rawdata= rawdata[self.btnf.header[0]:]
         self.gmif = GMIF(rawdata, self.btaf.table)
     def toString(self):
-        ret = "NARC"
-        ret += pack("IIHH", self.header[0], self.header[1], self.header[2],
+        ret = b"NARC"
+        ret += pack(b"IIHH", self.header[0], self.header[1], self.header[2],
             self.header[3]) + self.btaf.toString(self.gmif)
         ret += self.btnf.toString()+self.gmif.toString()
         return ret
     def toFile(self, f):
+        """ Write to file (with wb mode) """
         f.write(self.toString())
 
     def __getitem__(self, key):

@@ -1,8 +1,11 @@
-import narc
-import struct, re
-import cStringIO as StringIO
-import unicodeparser
-from binary16 import binaryreader, binarywriter
+import re
+from . import unicodeparser
+from .binary16 import binaryreader, binarywriter
+
+from functools import cmp_to_key
+unichr = chr
+def cmp(a, b):
+    return (a > b) - (a < b)
 
 usedflags = "c"
 
@@ -16,11 +19,11 @@ def sortTextKeys(a, b):
     if a[0].split("_")[0].lower() == "comment":
         return -1
     return cmp(a[0], b[0])
-    
+
 def gen4get(f):
     texts = []
     reader = binaryreader(f)
-    
+
     num = reader.read16()
     seed = reader.read16()
     hasComments = False
@@ -115,8 +118,8 @@ def gen4get(f):
                 text += unichr(c)
             e = "Comment_%i"%commentid
             texts.append([e, text])
-    return sorted(texts, cmp=sortTextKeys)
-    
+    return sorted(texts, key=cmp_to_key(sortTextKeys))
+
 def gen4put(texts):
     stringwriter = binarywriter()
     ofs = {}
@@ -223,15 +226,15 @@ def gen4put(texts):
         writer.write16(len(comments))
         for commentid in comments:
             writer.write16(commentid)
-            for c in unicode(comments[commentid]):
+            for c in comments[commentid]:
                 writer.write16(ord(c))
             writer.write16(0xFFFF)
     return writer.tostring()
-    
+
 def gen5get(f):
     texts = []
     reader = binaryreader(f)
-    
+
     numblocks = reader.read16()
     numentries = reader.read16()
     filesize = reader.read32()
@@ -323,7 +326,7 @@ def gen5get(f):
             e += flag
             texts.append([e, text])
     return texts
-    
+
 def gen5put(texts):
     textofs = {}
     sizes = {}
@@ -448,12 +451,12 @@ def gen5put(texts):
         writer.write32(offsets[i])
     writer.writear(textblock.toarray())
     return writer.tostring()
-    
+
 def get(gen, f):
     if gen == 5:
         return gen5get(f)
     return gen4get(f)
-    
+
 def put(gen, texts):
     if gen == 5:
         return gen5put(texts)

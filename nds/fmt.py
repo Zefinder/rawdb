@@ -2,7 +2,7 @@
 class FormatIterator:
     def __init__(self, fmt):
         self.fmt = list(fmt)
-    def next(self):
+    def __next__(self):
         s = ""
         if not self.fmt:
             raise StopIteration
@@ -31,7 +31,7 @@ class FormatIterator:
         return self
 
 dexfmt = {}
-dexfmt["diamond"] = ["BBBBBBBBBBHHHBBBBBBBBBBxx13s", 
+dexfmt["diamond"] = ["BBBBBBBBBBHHHBBBBBBBBBBxx13s",
     ["basehp"],
     ["baseatk"],
     ["basedef"],
@@ -59,7 +59,7 @@ dexfmt["diamond"] = ["BBBBBBBBBBHHHBBBBBBBBBBxx13s",
 ]
 dexfmt["platinum"] = dexfmt["diamond"][:]
 dexfmt["heartgold"] = dexfmt["diamond"][:]
-dexfmt["black"] = ["BBBBBBBBBBHHHHBBBBBBBBBBHHBBHHH", 
+dexfmt["black"] = ["BBBBBBBBBBHHHHBBBBBBBBBBHHBBHHH",
     ["basehp"],
     ["baseatk"],
     ["basedef"],

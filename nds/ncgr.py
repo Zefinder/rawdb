@@ -2,10 +2,10 @@ from struct import *
 from PIL import Image, ImagePalette
 
 class CHAR:
-    def __init__(self, rawdata, attribs): 
+    def __init__(self, rawdata, attribs):
         self.magic = rawdata[:4]
         if self.magic != "RAHC":
-            raise NameError, "RAHC tag not found"
+            raise NameError("RAHC tag not found")
         self.header = [-1]
         self.header[0], self.width, self.height, self.depth = unpack("IHHI", rawdata[4:16])
         u0, nottiled, parted, u1, self.scrsize, self.scrdataofs = unpack("IBBHII", rawdata[16:32])
@@ -86,7 +86,7 @@ class NCGR:
         """
         self.magic = rawdata[:4]
         if self.magic != "RGCN":
-            raise NameError, "RGCN tag not found"
+            raise NameError("RGCN tag not found")
         self.header = unpack("III", rawdata[4:16])
         rawdata = rawdata[16:]
         self.char = CHAR(rawdata, attribs)

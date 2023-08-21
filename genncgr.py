@@ -20,7 +20,7 @@ def recursefs(d):
             pfile = None
             dirname = os.path.dirname(ODIR+d)
             for j, f in enumerate(n.gmif.files):
-                if f[:4] == "RGCN":
+                if f[:4] == b"RGCN":
                     count += 1
                     graphic = ncgr.NCGR(f)
                     if not pfile:
@@ -39,7 +39,7 @@ def recursefs(d):
             ofile.write("\t<tr><td><a href='ncgr%s'>%s</a></td><td>%i files</td></tr>\n"%(d+FEXT, d, count))
         else:
             ofile.write("\t<tr><td>%s</td><td>0 files</td></tr>\n"%d)
-            
+
 
 for game in games:
     ODIR = STATIC_DIR+game+"/ncgr/"

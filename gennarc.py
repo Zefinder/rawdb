@@ -22,7 +22,7 @@ def recursefs(d):
     else:
         f = open(C_DIR+d, "rb")
         count = 0
-        if f.read(4) == "NARC":
+        if f.read(4) == b"NARC":
             f.seek(0)
             n = narc.NARC(f.read())
             f.close()
@@ -38,7 +38,7 @@ def recursefs(d):
         else:
             f.close()
             ofile.write("\t<tr><td>%s</td><td>Not a NARC</td></tr>\n"%d)
-            
+
 
 for game in games:
     ODIR = STATIC_DIR+game+"/narc/"

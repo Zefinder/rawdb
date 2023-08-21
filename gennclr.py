@@ -13,13 +13,13 @@ def recursefs(d):
     else:
         f = open(C_DIR+d, "rb")
         count = 0
-        if f.read(4) == "NARC":
+        if f.read(4) == b"NARC":
             f.seek(0)
             n = narc.NARC(f.read())
             f.close()
             pfile = None
             for j, f in enumerate(n.gmif.files):
-                if f[:4] == "RLCN":
+                if f[:4] == b"RLCN":
                     count += 1
                     clr = nclr.NCLR(f)
                     if not pfile:
@@ -38,7 +38,7 @@ def recursefs(d):
             ofile.write("\t<tr><td><a href='nclr%s'>%s</a></td><td>%i files</td></tr>\n"%(d+FEXT, d, count))
         else:
             ofile.write("\t<tr><td>%s</td><td>0 files</td></tr>\n"%d)
-            
+
 
 for game in games:
     ODIR = STATIC_DIR+game+"/nclr/"

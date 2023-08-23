@@ -161,7 +161,7 @@ def gen4put(texts):
                 if text[:2] == "AR":
                     text = text[3:] # also skip (
                     eov = text.find(")")
-                    args = map(int, text[:eov].split(","))
+                    args = list(map(int, text[:eov].split(",")))
                     text = text[eov+1:]
                     dec.append(0xFFFE)
                     dec.append(args.pop(0))

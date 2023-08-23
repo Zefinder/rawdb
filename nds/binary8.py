@@ -25,7 +25,7 @@ class binaryreader:
         self.ofs = ofs
     def pos(self):
         return self.ofs
-        
+
 class binarywriter:
     def __init__(self):
         self.s = array.array('B')
@@ -42,8 +42,8 @@ class binarywriter:
     def writear(self, a):
         self.s.extend(a)
     def tostring(self):
-        return self.s.tostring()
+        return self.s.tobytes()
     def toarray(self):
         return self.s
     def pos(self):
-        return len(self.s) 
+        return len(self.s)

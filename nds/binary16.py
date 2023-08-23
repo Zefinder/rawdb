@@ -17,7 +17,7 @@ class binaryreader:
         return ret
     def seek(self, ofs):
         self.ofs = ofs>>1
-        
+
 class binarywriter:
     def __init__(self):
         self.s = array.array('H')
@@ -29,7 +29,7 @@ class binarywriter:
     def writear(self, a):
         self.s.extend(a)
     def tostring(self):
-        return self.s.tostring()
+        return self.s.tobytes()
     def toarray(self):
         return self.s
     def pos(self):

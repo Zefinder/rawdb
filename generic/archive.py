@@ -1,12 +1,16 @@
 
 import abc
+import os
+import time
 import zipfile
 
+from rawdb.util import natsort_key
 from rawdb.util.io import BinaryIO
 
-
+# TODO Verify that everything is correct here
+# TODO Add type hints
 class Archive(object):
-    __metaclass__ = abc.ABCMeta
+    # __metaclass__ = abc.ABCMeta
     files = {}
     extension = '.bin'
 
@@ -27,13 +31,14 @@ class Archive(object):
         pass
 
     def __iter__(self):
-        return self.files
+        return iter(self.files)
 
     def __len__(self):
         return len(self.files)
 
+    @abc.abstractmethod
     def save(self, writer=None):
-        return writer
+        pass
 
     def get_value(self):
         """String of this Archive"""
@@ -52,10 +57,37 @@ class Archive(object):
             try:
                 names = self.files.keys()
             except AttributeError:
-                names = xrange(len(self.files))
+                names = range(len(self.files))
             for name in names:
-                archive.writestr(str(name)+self.extension, self.files[name])
+                zipinfo = zipfile.ZipInfo(
+                    str(name)+self.extension,
+                    date_time=time.localtime(time.time())[:6])
+                zipinfo.compress_type = archive.compression
+                zipinfo.external_attr = 33152 << 16
+                archive.writestr(zipinfo, self.files[name])
         return handle
+
+    def export_dir(self, dir_name):
+        """Build a directory from files
+
+        Parameters
+        ----------
+        dir_name : string
+            Destination directory. It will be created if it does not exist.
+        """
+        try:
+            os.makedirs(dir_name)
+        except:
+            pass
+        try:
+            names = self.files.keys()
+        except AttributeError:
+            names = range(len(self.files))
+        for name in names:
+            with open(os.path.join(dir_name, str(name)+self.extension), 'w')\
+                    as handle:
+                handle.write(self.files[name])
+        return dir_name
 
     def import_(self, handle, mode='r'):
         """Import files from the zip archive into this
@@ -69,7 +101,7 @@ class Archive(object):
         """
         self.reset()
         with zipfile.ZipFile(handle, mode) as archive:
-            for name in archive.namelist():
+            for name in sorted(archive.namelist(), key=natsort_key):
                 if name.endswith(self.extension):
                     internalname = name[:-len(self.extension)]
                 else:

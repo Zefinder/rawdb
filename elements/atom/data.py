@@ -67,7 +67,7 @@ class DataConsumer(object):
             self.offset = 0 + offset
         else:
             target = self
-            for i in xrange(whence):
+            for i in range(whence):
                 target = target.parent
             self.offset = target.base_offset + offset
 

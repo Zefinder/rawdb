@@ -25,7 +25,7 @@ class BaseElement(GameAdapter):
         return self.atom(self.archive[key])
 
     def __iter__(self):
-        for x in xrange(len(self)):
+        for x in range(len(self)):
             yield x
 
     def __contains__(self, item):

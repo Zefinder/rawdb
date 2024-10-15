@@ -46,21 +46,6 @@ def gcf(a, b):
     return a
 
 
-def lcm(a, b):
-    """Return the Least Common Multiple of two numbers
-
-    Parameters
-    ----------
-    a : int
-    b : int
-
-    Returns
-    -------
-    lcm : int
-    """
-    return a*b / gcf(a, b)
-
-
 def subclasses(cls, recursive=False):
     """Get all subclasses of a class.
 
@@ -101,4 +86,4 @@ def natsort_key(key):
 
 
 __all__ = ['cached_property', 'temporary_attr', 'AttrDict', 'BinaryIO',
-           'lget', 'gcf', 'lcm', 'natsort_key']
+           'lget', 'gcf', 'natsort_key']

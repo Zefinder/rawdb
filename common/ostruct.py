@@ -1,5 +1,6 @@
 import struct
 from collections import OrderedDict
+from io import IOBase
 
 
 class OStructContents(dict):
@@ -41,7 +42,7 @@ class OStruct(OrderedDict):
         contents: OStructContents
 
         """
-        if isinstance(data_or_handle, file):
+        if isinstance(data_or_handle, IOBase):
             data = data_or_handle.read(self.size)
         else:
             data = data_or_handle[:self.size]

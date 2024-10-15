@@ -1,8 +1,10 @@
 
 import struct
-from six import StringIO
+from io import BytesIO, StringIO
 
 __all__ = ['BinaryIO']
+
+NUL = chr(0)
 
 
 class StructReaders:
@@ -42,7 +44,7 @@ class SeekReturn(object):
         self.handle.seek(self.position)
 
 
-class BinaryIO(StringIO):
+class BinaryIO(BytesIO):
     """Reader and Writer for binary data.
 
     This provides useful methods for reading and writing specific binary
@@ -55,8 +57,8 @@ class BinaryIO(StringIO):
     data : string
         Binary string to be used
     """
-    def __init__(self, data=''):
-        StringIO.__init__(self, data)
+    def __init__(self, data: bytes = b''):
+        BytesIO.__init__(self, data)
 
     def readUInt8(self):
         return StructReaders.uint8.unpack(self.read(1))[0]
@@ -128,6 +130,39 @@ class BinaryIO(StringIO):
         data = char*((offset-position)/len(char)+1)
         self.write(data[:offset-position])
 
+    def readString(self):
+        """Read a null terminated string
+
+        Returns
+        -------
+        chars : string
+            String with no nul character
+        """
+        chars = ''
+        while True:
+            char = self.read(1)
+            if char == NUL:
+                break
+            chars += char
+        return chars
+
+    def writeString(self, chars):
+        """Write a null terminated string. If the input has a null byte in
+        it, it will not write past that byte. Null bytes will be added if
+        not provided.
+
+        Parameters
+        ----------
+        chars : string
+            String to write
+        """
+        nullidx = chars.find(NUL)
+        if nullidx == -1:
+            self.write(chars)
+            self.write(NUL)
+        else:
+            self.write(chars[:nullidx+1])
+
     def seek(self, offset, whence=0):
         """Seeks to the given offset
 
@@ -135,13 +170,46 @@ class BinaryIO(StringIO):
         after the context exits.
         """
         position = self.tell()
-        StringIO.seek(self, offset, whence)
+        BytesIO.seek(self, offset, whence)
         return SeekReturn(self, position)
+
+    def peek(self):
+        """Returns a seek context to its current position. When the context
+        exists, it will return back to its original position.
+
+        Returns
+        -------
+        SeekReturn
+        """
+        return self.seek(self.tell())
 
     @staticmethod
     def adapter(handle):
         """Create a BinaryIOAdapter around a file handle"""
         return BinaryIOAdapter(handle)
+
+    @staticmethod
+    def reader(target) -> "BinaryIO":
+        """Creates a new reader for appropriate type
+
+        Parameters
+        ----------
+        target : unknown
+            Reader available
+
+        Returns
+        -------
+        reader : BinaryIO
+        """
+        if isinstance(target, BinaryIO):
+            return target
+        elif hasattr(target, 'read'):
+            return BinaryIO.adapter(target)
+        elif not target:
+            return BinaryIO()
+        else:
+            return BinaryIO(target)
+    writer = reader
 
 
 class BinaryIOAdapter(BinaryIO):
@@ -159,6 +227,10 @@ class BinaryIOAdapter(BinaryIO):
     def write(self, value):
         self.handle.write(value)
 
+    def readline(self):
+        # Faster to use underlying method
+        return self.handle.readline()
+
     def seek(self, offset, whence=0):
         position = self.tell()
         self.handle.seek(offset, whence)
@@ -167,3 +239,23 @@ class BinaryIOAdapter(BinaryIO):
     def tell(self):
         return self.handle.tell()
 
+
+class BoundIO(object):
+    """Binds a binary_io to an object so that all of its functions use obj
+    directly"""
+    def __init__(self, obj, binary_io):
+        self.handle = binary_io
+        self.obj = obj
+
+    def __getattr__(self, name):
+        attr = super(BoundIO, self).__getattr__(name)
+        if name[:4] == 'read':
+            def bound_read_wrapper(target, *args, **kwargs):
+                setattr(self.obj, target, attr(*args, **kwargs))
+            return bound_read_wrapper
+        elif name[:5] == 'write':
+            def bound_write_wrapper(target, *args, **kwargs):
+                attr(getattr(self.obj, target), *args, **kwargs)
+            return bound_write_wrapper
+        else:
+            return attr

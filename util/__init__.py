@@ -1,8 +1,9 @@
-
-from attr import temporary_attr
-from cache import cached_property
+import re
+from rawdb.util.attr import temporary_attr, AttrDict
+from rawdb.util.cache import cached_property
 from rawdb.util.io import BinaryIO
 
+# TODO This needs to be put somewhere but not here... 
 
 def lget(lst, idx, default=None):
     """Gets an item from a list if the list supports it. Otherwise it returns
@@ -28,4 +29,76 @@ def lget(lst, idx, default=None):
         return default
 
 
-__all__ = ['cached_property', 'temporary_attr', 'BinaryIO', 'lget']
+def gcf(a, b):
+    """Return the Greatest Common Factor of two numbers
+
+    Parameters
+    ----------
+    a : int
+    b : int
+
+    Returns
+    -------
+    gcf : int
+    """
+    while b:
+        a, b = b, a % b
+    return a
+
+
+def lcm(a, b):
+    """Return the Least Common Multiple of two numbers
+
+    Parameters
+    ----------
+    a : int
+    b : int
+
+    Returns
+    -------
+    lcm : int
+    """
+    return a*b / gcf(a, b)
+
+
+def subclasses(cls, recursive=False):
+    """Get all subclasses of a class.
+
+    Parameters
+    ----------
+    cls : class
+        Target class
+    recursive : Bool, optional
+        Get subclasses of subclasses as well
+    """
+    subs = cls.__subclasses__()
+    if recursive:
+        for subcls in subs[:]:
+            subs += subclasses(subcls, True)
+    return subs
+
+
+def natsort_key(key):
+    """Produce a natural key for sorting
+
+    Returns
+    -------
+    key : list
+        Sortable key
+
+    Examples
+    --------
+    >>> lst = ['2.png', '1.png', '10.png']
+    >>> sorted(lst, key=natsort_key)
+    ['1.png', '2.png', '10.png']
+    """
+    def get_val(chunk):
+        try:
+            return int(chunk)
+        except:
+            return chunk
+    return [get_val(chunk) for chunk in re.split('([0-9]+)', key)]
+
+
+__all__ = ['cached_property', 'temporary_attr', 'AttrDict', 'BinaryIO',
+           'lget', 'gcf', 'lcm', 'natsort_key']

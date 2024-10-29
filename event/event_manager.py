@@ -22,9 +22,6 @@ class EventManager(metaclass=Singleton):
     Manager that will notify all registered listeners of an event 
     when it is fired. Is implemented as a singleton, any new creation
     will return the same instance.
-
-    Args:
-        a (int): z
     """
 
     _registered_handlers: dict[str, list[Callable[[Event], None]]]
@@ -76,7 +73,7 @@ class EventManager(metaclass=Singleton):
         Fire the event and notify all registered handlers
 
         Args:
-            event (Event): _description_
+            event (Event): Event to fire
         """
         if event.name not in self._registered_handlers:
             print(f'WARNING: Event {event.name:s} is not registered')

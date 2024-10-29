@@ -18,7 +18,7 @@ class Event(object):
         data (Any): Event's data
         cancelled (bool): Whether this event should continue to propagate. 
         Use Event.cancel() to cancel an event
-        success (bool): Whether this event has successfully executed
+        success (bool): Whether this event has successfully executed (property)
     """
     name: str
     source: object

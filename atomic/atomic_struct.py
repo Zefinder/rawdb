@@ -19,6 +19,7 @@ class FieldTypes(str, ReprEnum):
     """
     Enumeration of common types that are used in structs with 
     their name and size in bytes. Their format MUST BE str, int.
+    Also the type name must be the enum element name
 
     Raises:
         TypeError: When the format is not str, int
@@ -28,8 +29,8 @@ class FieldTypes(str, ReprEnum):
     """
     # Values must be tuple[str, int] corresponding to data's name and size
     def __new__(cls, *values) -> str:
-        if len(values) != 2:
-            raise TypeError('Field types must have 2 arguments, the data type name and its size in bytes')
+        if len(values) < 2:
+            raise TypeError('Field types must have at least 2 arguments, the data type name and its size in bytes')
         
         if not isinstance(values[1], int):
             raise TypeError('Field type size must be an int')
@@ -40,21 +41,32 @@ class FieldTypes(str, ReprEnum):
         return member
     
 
-    def __init__(self, type_name: str, size: int):
+    @classmethod
+    def from_type_name(cls, type_name: str) -> 'FieldTypes | None':
+        return cls.__members__.get(type_name)
+
+
+    def __init__(self, type_name: str, size: int, python_type: type, min: int | float = 0, max: int | float = 0):
         self.type_name = type_name
         self.size = size
+        self.python_type = python_type
+        # Min and max are defined only when it makes sense!
+        self.min = min
+        self.max = max
 
 
-    char = 'char', 1
-    uint8_t = 'uint8_t', 1
-    uint16_t ='uint16_t', 2
-    uint32_t = 'uint32_t', 3
-    uint64_t = 'uint64_t', 4
-    int8_t = 'int8_t', 1
-    int16_t = 'int16_t', 2
-    int32_t = 'int32_t', 3
-    int64_t = 'int64_t', 4
-    bool = 'bool', 1
+    char = 'char', 1, str
+    bool = 'bool', 1, bool
+    uint8_t = 'uint8_t', 1, int, 0, 0xFF
+    uint16_t ='uint16_t', 2, int, 0, 0xFFFF
+    uint32_t = 'uint32_t', 4, int, 0, 0xFFFFFFFF
+    uint64_t = 'uint64_t', 8, int, 0, 0xFFFFFFFFFFFFFFFF
+    int8_t = 'int8_t', 1, int, -0x80, 0x7F
+    int16_t = 'int16_t', 2, int, -0x8000, 0x7FFF
+    int32_t = 'int32_t', 4, int, -0x80000000, 0x7FFFFFFF
+    int64_t = 'int64_t', 8, int, -0x8000000000000000, 0x7FFFFFFFFFFFFFFF
+    double = 'double', 8, float, -1e37, 1e37 # Put before else it'll think I use the one of FieldTypes
+    float = 'float', 4, float, -1e37, 1e37
 
 
 class AtomicField(object, metaclass=ABCMeta):
@@ -691,7 +703,29 @@ class AtomicStructBuilder(object):
                                                                width=0,
                                                                default=None))
         return self
-        
+    
+
+    def add_custom(self, name: str, custom_type_name: str) -> 'AtomicStructBuilder':
+        """
+        Adds a custom field to the struct. This is useful when having classes.
+
+        For example:
+
+        >>> example_struct = AtomicStructBuilder().add_custom('custom', 'custom_type').build('example')
+
+        Output:
+            struct example {
+                custom_type custom;
+            };
+
+        Args:
+            name (str): Field's name
+            custom_type_name (str): Custom type's name
+        """
+        self.fields[name] = AtomicDataField(name=name,
+                                            _type=custom_type_name)
+        return self
+
     
     def build(self, name: str, declared_struct_name: str = '') -> AtomicStructField:
         """

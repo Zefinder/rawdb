@@ -26,9 +26,12 @@ class Restriction(object):
     validators: list[tuple[str, Callable[[Any], bool]]]
 
 
-    def __init__(self, restriction_name: str) -> None:
+    def __init__(self, restriction_name: str, *validators: tuple[str, Callable[[Any], bool]]) -> None:
         self.restriction_name = restriction_name
         self.validators = []
+
+        for validator in validators:
+            self.validators.append(validator)
 
 
     def restrict(self, name: str, validator: Callable[[Any], bool]) -> None:

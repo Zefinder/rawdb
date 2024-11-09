@@ -1,6 +1,5 @@
 
 from abc import ABCMeta, abstractmethod
-import json
 from collections import OrderedDict
 from typing import Any, Callable
 

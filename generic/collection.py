@@ -1,15 +1,9 @@
-import ctypes
-from turtle import width
 from typing import Any
-
-from cycler import V
-from numpy import resize
 from rawdb.atomic.atomic_struct import AtomicStructBuilder, FieldTypes
 from rawdb.generic.editable import Editable
 from rawdb.generic.restriction import Restriction
 
 
-# TODO Add type hints
 class Collection2d(Editable):
     entries: list[Any]
     width: int
@@ -197,6 +191,12 @@ class SizedCollection(Editable):
 
 
     def append(self, value: Any) -> None:
+        """
+        Appends a new value to the array
+
+        Args:
+            value (Any): New value to append
+        """
         if self.resizable:
             if isinstance(self.entries, str):
                 length = len(self.entries) + 1
@@ -212,6 +212,12 @@ class SizedCollection(Editable):
 
 
     def pop(self) -> Any:
+        """
+        Retreives and remove the last value of the array
+
+        Returns:
+            Any: The removed value
+        """
         value = None
         if self.resizable:
             value = self.entries[-1]

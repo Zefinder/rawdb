@@ -56,7 +56,7 @@ class FieldTypes(str, ReprEnum):
 
 
     char = 'char', 1, str
-    bool = 'bool', 1, bool
+    bool = 'bool', 1, bool, False, True
     uint8_t = 'uint8_t', 1, int, 0, 0xFF
     uint16_t ='uint16_t', 2, int, 0, 0xFFFF
     uint32_t = 'uint32_t', 4, int, 0, 0xFFFFFFFF
@@ -145,6 +145,8 @@ class AtomicDataField(AtomicField):
         if width == 0:
             if isinstance(_type, FieldTypes):
                 self.size = _type.size
+            else:
+                self.size = 0 # No information so nothing!
         else:
             self.size = 0
             self.bit_size = width
@@ -209,6 +211,8 @@ class AtomicArrayField(AtomicDataField):
                 self.size = _type.size
                 for dim in range(0, dimension): # Matrix
                     self.size *= lengths[dim]
+        else:
+            self.size = 0; # No information so 0
 
         self.lengths = lengths
 
@@ -436,7 +440,7 @@ class AtomicStructBuilder(object):
             del self.fields[name]
 
 
-    def add_field(self, name: str, _type: FieldTypes, width: int = 0, default: Any = None) -> 'AtomicStructBuilder':
+    def add_field(self, name: str, _type: FieldTypes, *, width: int = 0, default: Any = None) -> 'AtomicStructBuilder':
         """
         Adds a field to the struct.
 
@@ -485,6 +489,33 @@ class AtomicStructBuilder(object):
         """
         self.fields[name] = AtomicArrayField(name=name,
                                              _type=_type,
+                                             dimension=dimension,
+                                             lengths=lengths)
+        return self
+
+
+    def add_array_custom(self, name: str, type_name: str, *, dimension: int = 1, lengths: tuple[int, ...] = (1,)) -> 'AtomicStructBuilder':
+        """
+        Adds an array with a custom type to the struct. 
+
+        For example:
+
+        >>> example_struct = AtomicStructBuilder().add_array('matrix', "any", dimension=2, lengths=(10, 20,)).build('example')
+        >>> example_struct.describe()
+
+        Output:
+            struct example {
+                any matrix[10][20];
+            };
+
+        Args:
+            name (str): Array's name
+            type_name (FieldTypes): Custom type's name
+            dimension (int, optional): Array's dimension. Defaults to 1.
+            lengths (tuple[int, ...], optional): Array's length per dimension. Defaults to (1,).
+        """
+        self.fields[name] = AtomicArrayField(name=name,
+                                             _type=type_name,
                                              dimension=dimension,
                                              lengths=lengths)
         return self

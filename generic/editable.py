@@ -4,15 +4,10 @@ import json
 from collections import OrderedDict
 from typing import Any, Callable
 
-from numpy import isin
-
 from rawdb.atomic import AtomicStructField
 from rawdb.atomic.atomic_struct import AtomicArrayField, AtomicDataField, AtomicField, AtomicFieldPointer, AtomicStructBuilder, FieldTypes
 from rawdb.event import INSERT_EVENT_NAME, INVALID_EVENT_NAME, REMOVE_EVENT_NAME, SET_EVENT_NAME
-from rawdb.util.iter import auto_iterate
 from rawdb.generic.restriction import Restriction
-from math import lcm
-
 
 class Editable(object, metaclass=ABCMeta):
     """Editable interface
@@ -45,12 +40,12 @@ class Editable(object, metaclass=ABCMeta):
     """
     keys: dict[str, tuple[Any, Restriction | None]]
 
-    def __init__(self) -> None:
+    def __init__(self, *args: Any) -> None:
         self.keys = OrderedDict()
         
         # Define struct using the abstract method
         builder = AtomicStructBuilder()
-        self.define(builder=builder)
+        self.define(builder, args)
         struct = builder.build('struct')
 
         # Add restrictions for each field
@@ -76,7 +71,7 @@ class Editable(object, metaclass=ABCMeta):
 
 
     @abstractmethod
-    def define(self, builder: AtomicStructBuilder):
+    def define(self, builder: AtomicStructBuilder, args: Any):
         """
         Method called during initialisation, used to define the underlying 
         struct and create restrictions. You can add other restrictions using
@@ -103,6 +98,7 @@ class Editable(object, metaclass=ABCMeta):
 
         Args:
             builder (AtomicStructBuilder): Struct builder
+            args (Any): Specific argument to pass to the subclass implementation
 
         Returns:
             None: Returns nothing, just add to the builder
@@ -168,22 +164,20 @@ class Editable(object, metaclass=ABCMeta):
                 if field_type is not None:
                     restriction.restrict('field_type', lambda arr: all(isinstance(value, field_type) for value in arr))
                 value = [value for _ in range(0, array_field.lengths[0])]
+                restriction.restrict('field_size', lambda value: len(value) == array_field.lengths[0])
             
-            restriction.restrict('field_size', lambda value: len(value) == array_field.lengths[0])
         
         else:
             # TODO If more than 1 dimension, add check for every elements
             if field_type == str:
                 value = '\0' * (array_field.lengths[0] - 1)
-                for dimension in range(1, array_field.width):
-                    value = [value for _ in range(0, array_field.lengths[dimension])]
+                value = self.create_ndarray(list(array_field.lengths[1:]), value)
             else:
-                for dimension in range(0, array_field.width):
-                    value = [value for _ in range(0, array_field.lengths[dimension])] # Build default
+                value = self.create_ndarray(list(array_field.lengths), value)
             
             # Just add restriction to the first step
             restriction.restrict('field_type', lambda value: isinstance(value, list))
-            restriction.restrict('field_size', lambda value: len(value) == array_field.lengths[0] - 1)
+            restriction.restrict('field_size', lambda value: len(value) == array_field.lengths[-1])
 
         self.keys[array_field.name] = (value, restriction)
 
@@ -202,7 +196,6 @@ class Editable(object, metaclass=ABCMeta):
             value = ''
         elif field_type is not None:
             restriction.restrict('field_type', lambda arr: all(isinstance(value, field_type) for value in arr))
-            value = [value]
 
         self.keys[pfield.name[1:]] = (value, restriction)
 
@@ -256,7 +249,7 @@ class Editable(object, metaclass=ABCMeta):
         # Else return the field in the dict
         if name in self.keys:
             return self.keys[name][0]
-        
+
         raise AttributeError(f'\'{type(self).__name__:s}\' object has no attribute {name:s}')
 
 
@@ -278,9 +271,12 @@ class Editable(object, metaclass=ABCMeta):
 
                 # If everything is good then change value
                 self.keys[name] = (value, restriction)
+            
+            self.validate()
+
         else:
             raise AttributeError(f'\'{type(self).__name__:s}\' object has no attribute {name:s}')
-
+        
 
     def restrict(self, field_name: str, restriction_name: str, validator: Callable[[Any], bool]):
         """
@@ -296,6 +292,25 @@ class Editable(object, metaclass=ABCMeta):
             (_, restriction) = self.keys[field_name]
             if restriction is not None:
                 restriction.restrict(name=restriction_name, validator=validator)
+
+    
+    def validate(self):
+        for (value, restriction) in self.keys.values():
+            if restriction is not None:
+                restriction.validate(value=value)
+            else:
+                # In that case value is an Editable
+                if isinstance(value, Editable):
+                    value.validate()                
+
+
+    @staticmethod
+    def create_ndarray(lengths: list[int], value: Any) -> list[Any]:
+        if len(lengths) == 1:
+            return [value] * lengths[0]
+        else:
+            return [Editable.create_ndarray(lengths[:-1], value) for _ in range(0, lengths[-1])]
+
 
 #     @staticmethod
 #     def fx_property(attr_name, shift=12):

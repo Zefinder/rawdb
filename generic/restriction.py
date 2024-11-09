@@ -23,15 +23,15 @@ class Restriction(object):
     """
 
     restriction_name: str
-    validators: list[tuple[str, Callable[[Any], bool]]]
+    validators: dict[str, Callable[[Any], bool]]
 
 
     def __init__(self, restriction_name: str, *validators: tuple[str, Callable[[Any], bool]]) -> None:
         self.restriction_name = restriction_name
-        self.validators = []
+        self.validators = {}
 
-        for validator in validators:
-            self.validators.append(validator)
+        for validator_name, validator in validators:
+            self.validators[validator_name] = validator
 
 
     def restrict(self, name: str, validator: Callable[[Any], bool]) -> None:
@@ -64,7 +64,7 @@ class Restriction(object):
         >>>
         """
 
-        self.validators.append((name, validator))
+        self.validators[name] = validator
 
 
     def validate(self, value: Any) -> None:
@@ -77,6 +77,6 @@ class Restriction(object):
         Raises:
             RestrictionError: If a restriction is not met
         """
-        for (name, validator) in self.validators:
+        for (name, validator) in self.validators.items():
             if not validator(value):
                 raise RestrictionError(self.restriction_name, value, name)

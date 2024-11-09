@@ -1,11 +1,10 @@
-from abc import ABCMeta, abstractmethod
+from abc import ABCMeta
 import os
 import time
 from typing import Any
 from zipfile import ZipFile, ZipInfo
 
 from rawdb.util import natsort_key
-from rawdb.util.io import BinaryIO
 
 class Archive(object, metaclass=ABCMeta):
     files: list[Any]

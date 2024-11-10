@@ -1,261 +1,281 @@
+from struct import calcsize
+from rawdb.interfaces.binary_io import IOHandler, StructModes
 
-import struct
-from io import BytesIO, StringIO
+class IOFileHandler(IOHandler):
+    filename: str
+    readable: bool
+    writable: bool
+    position: int
 
-__all__ = ['BinaryIO']
+    def __init__(self, filename: str, mode: str = 'rw') -> None:
+        """
+        Creates a new IOHandler with a file. The mode is either 
+        'r', 'w' or 'rw' (for read, write or read/write). The position
+        is shared for reads and writes, means that reading 1 byte at 
+        position 0 will write at position 1 (quite normal, but python r+
+        does not follow this.).
 
-NUL = chr(0)
+        Args:
+            filename (str): File name
+            mode (str, optional): Opening mode. Defaults to 'rw'.
+        """
+        self.readable = 'r' in mode
+        self.writable = 'w' in mode
+        self.filename = filename
+        self.position = 0
 
 
-class StructReaders:
-    """Cached built structs
-    """
-    int8 = struct.Struct('b')
-    uint8 = struct.Struct('B')
-    int16 = struct.Struct('h')
-    uint16 = struct.Struct('H')
-    int32 = struct.Struct('i')
-    uint32 = struct.Struct('I')
+    def read(self, mode: StructModes) -> int:
+        if self.readable:
+            with open(self.filename, 'br') as file:
+                # Seek to position
+                file.seek(self.position)
+
+                struct_len = calcsize(mode.format)
+                self.position += struct_len
+                return mode.unpack(file.read(struct_len))[0]
+
+        # Default value is 0 (char \0)
+        return 0
+
+    def read_bytes(self) -> bytes:
+        if self.readable:
+            with open(self.filename, 'br') as file:
+                # Seek to position
+                file.seek(self.position)
+
+                result = b''
+                read_char = file.read(1)
+                self.position += 1
+
+                while read_char != b'\0':
+                    result += read_char
+                    read_char = file.read(1)
+                    self.position += 1
+
+                return result
+            
+        # Default value is b'\0'
+        return b'\0'
 
 
-class SeekReturn(object):
-    """Context for returning to a position after seeking to it
+    def read_str(self) -> str:
+        if self.readable:
+            with open(self.filename, 'br') as file:
+                # Seek to position
+                file.seek(self.position)
 
-    Example
-    -------
-    >>> writer = BinaryIO()
-    >>> writer.writeUInt32(0)
-    >>> writer.writeUInt32(0)
-    >>> with writer.seek(0):
-    ...     writer.writeUInt8(0xFF)
-    ...
-    >>> writer.writeUInt8(0xEE)
-    >>> writer.getvalue()
-    '\xff\x00\x00\x00\x00\x00\x00\x00\xee'
-    """
-    def __init__(self, handle, position):
-        self.handle = handle
+                # Search for the \0 character
+                old_position = self.position
+                read_char = b''
+                chars_read = 0
+                while read_char != b'\0':
+                    read_char = file.read(1)
+                    chars_read += 1
+
+                # Return to old position and read the whole bytes
+                file.seek(old_position)
+                bytes_results = file.read(chars_read)
+                self.position += chars_read
+
+                # Return the decoded string MINUS the \0 character
+                return bytes_results.decode('utf-8')[:-1]
+        
+        # Default value is '\0'
+        return '\0'
+
+
+    def transform_data(self, value: bytes) -> bytes:
+        # Get value current value
+        data = self.getvalue()
+
+        # Save before position changing
+        first_data = data[:self.position]
+
+        # If position + length is greater or equal to the file length, no work to do
+        if self.position + len(value) >= len(data):
+            result = first_data + value
+        else:
+            last_data = data[self.position + len(value):]
+            result = first_data + value + last_data
+        
+        return result
+
+
+    def write(self, mode: StructModes, value: int) -> None:
+        if self.writable:
+            new_data = self.transform_data(mode.pack(value))
+            with open(self.filename, 'bw') as file:
+                file.write(new_data)
+                self.position += calcsize(mode.format)
+
+
+    def write_bytes(self, string: bytes) -> None:
+        if self.writable:
+            # Search for a \0, if not present then add it at the end
+            null_index = string.find(b'\0')
+            if null_index == -1:
+                null_index = len(string)
+                string += b'\0'
+            
+            new_data = self.transform_data(string)
+            with open(self.filename, 'bw') as file:
+                file.write(new_data)
+                self.position += len(string)
+
+
+    def write_str(self, string: str) -> None:
+        if self.writable:
+            # Search for a \0, if not present then add it at the end
+            null_index = string.find('\0')
+            if null_index == -1:
+                null_index = len(string)
+                string += '\0'
+
+            bytes_string = string.encode('utf-8')
+
+            new_data = self.transform_data(bytes_string)
+            with open(self.filename, 'bw') as file:
+                file.write(new_data)
+                self.position += len(bytes_string)
+
+    
+    def align(self, byte_number: int, value: bytes = b'\x00') -> None:
+        if self.writable:
+            # Check if value is a single byte
+            if len(value) > 1:
+                value = value[:1]
+
+            bytes_to_write = value * (self.position % byte_number)
+            new_data = self.transform_data(bytes_to_write)
+            with open(self.filename, 'bw') as file:
+                file.write(new_data)
+                self.position += len(bytes_to_write)
+
+
+    def getvalue(self) -> bytes:
+        if self.readable:
+            with open(self.filename, 'br') as file:
+                return file.read()
+
+        # Default value is b'\0'
+        return b'\0'
+    
+
+    def seek(self, position: int) -> None:
         self.position = position
 
-    def __enter__(self):
-        pass
 
-    def __exit__(self, type_, value, traceback):
-        self.handle.seek(self.position)
+class IOBytesHandler(IOHandler):
+    content: bytes
+    position: int
 
-
-class BinaryIO(BytesIO):
-    """Reader and Writer for binary data.
-
-    This provides useful methods for reading and writing specific binary
-    types.
-
-    To use a file handle, use BinaryIO.adapter(handle)
-
-    Parameters
-    ----------
-    data : string
-        Binary string to be used
-    """
-    def __init__(self, data: bytes = b''):
-        BytesIO.__init__(self, data)
-
-    def readUInt8(self):
-        return StructReaders.uint8.unpack(self.read(1))[0]
-
-    def writeUInt8(self, value):
-        self.write(StructReaders.uint8.pack(value))
-
-    def readInt8(self):
-        return StructReaders.int8.unpack(self.read(1))[0]
-
-    def writeInt8(self, value):
-        self.write(StructReaders.int8.pack(value))
-
-    def readUInt16(self):
-        return StructReaders.uint16.unpack(self.read(2))[0]
-
-    def writeUInt16(self, value):
-        self.write(StructReaders.uint16.pack(value))
-
-    def readInt16(self):
-        return StructReaders.int16.unpack(self.read(2))[0]
-
-    def writeInt16(self, value):
-        self.write(StructReaders.int16.pack(value))
-
-    def readUInt32(self):
-        return StructReaders.uint32.unpack(self.read(4))[0]
-
-    def writeUInt32(self, value):
-        self.write(StructReaders.uint32.pack(value))
-
-    def readInt32(self):
-        return StructReaders.int32.unpack(self.read(4))[0]
-
-    def writeInt32(self, value):
-        self.write(StructReaders.int32.pack(value))
-
-    def writeAlign(self, alignment=4, char='\x00'):
-        """Writes char multiple times to align the writer
-
-        Parameters
-        ----------
-        alignment : int
-            Positive number to align with. The write buffer will
-            be filled until it is divisible by this number exactly
-        char : string
-            String that will be written to the space. If multiple
-            characters, it will get truncated the last time.
+    def __init__(self, filename: str = '') -> None:
         """
-        position = self.tell()
-        offset = position+((-position) % alignment)
-        self.writePadding(offset, char)
+        Creates a new string IOHandler with a file. The mode is either 
+        'r', 'w' or 'rw' (for read, write or read/write). The position
+        is shared for reads and writes, means that reading 1 byte at 
+        position 0 will write at position 1 (quite normal, but python r+
+        does not follow this.).
 
-    def writePadding(self, offset, char='\x00'):
-        """Writes char multiple times until offset is met
+        Note that for the string version, there does not need an access mode
 
-        Parameters
-        ----------
-        offset : int
-            Destination offset. The buffer will be here upon
-            completion of the write.
-        char : string
-            String that will be written to the space. If multiple
-            characters, it will get truncated the last time.
+        Args:
+            filename (str): File name. Defaults to ''
         """
-        position = self.tell()
-        if offset <= position:
-            return
-        data = char*((offset-position)/len(char)+1)
-        self.write(data[:offset-position])
+        self.content = b''
+        # If empty filename, then no load, just an empty string
+        if filename != '':
+            with open(filename, 'br') as file:
+                self.content = file.read()
 
-    def readString(self):
-        """Read a null terminated string
+        self.position = 0
 
-        Returns
-        -------
-        chars : string
-            String with no nul character
-        """
-        chars = ''
-        while True:
-            char = self.read(1)
-            if char == NUL:
-                break
-            chars += char
-        return chars
 
-    def writeString(self, chars):
-        """Write a null terminated string. If the input has a null byte in
-        it, it will not write past that byte. Null bytes will be added if
-        not provided.
+    def read(self, mode: StructModes) -> int:
+        struct_len = calcsize(mode.format)
+        result = mode.unpack_from(self.content, self.position)[0]
+        self.position += struct_len
+        
+        return result
+    
 
-        Parameters
-        ----------
-        chars : string
-            String to write
-        """
-        nullidx = chars.find(NUL)
-        if nullidx == -1:
-            self.write(chars)
-            self.write(NUL)
+    def read_bytes(self) -> bytes:
+        result = b''
+        null_index = self.content.find(b'\0', self.position)
+        result = self.content[self.position:null_index]
+        self.position = null_index
+
+        return result
+
+
+    def read_str(self) -> str:
+        # Search for the \0 character
+        null_index = self.content.find(b'\0', self.position)
+        result = self.content[self.position:null_index]
+        self.position = null_index
+
+        # Return the decoded string MINUS the \0 character
+        return result.decode('utf-8')[:-1]
+
+
+    def transform_data(self, value: bytes) -> bytes:
+        # Save before position changing
+        first_data = self.content[:self.position]
+
+        # If position + length is greater or equal to the file length, no work to do
+        if self.position + len(value) >= len(self.content):
+            result = first_data + value
         else:
-            self.write(chars[:nullidx+1])
-
-    def seek(self, offset, whence=0):
-        """Seeks to the given offset
-
-        If used in a with statement, it returns to the previous position
-        after the context exits.
-        """
-        position = self.tell()
-        BytesIO.seek(self, offset, whence)
-        return SeekReturn(self, position)
-
-    def peek(self):
-        """Returns a seek context to its current position. When the context
-        exists, it will return back to its original position.
-
-        Returns
-        -------
-        SeekReturn
-        """
-        return self.seek(self.tell())
-
-    @staticmethod
-    def adapter(handle):
-        """Create a BinaryIOAdapter around a file handle"""
-        return BinaryIOAdapter(handle)
-
-    @staticmethod
-    def reader(target) -> "BinaryIO":
-        """Creates a new reader for appropriate type
-
-        Parameters
-        ----------
-        target : unknown
-            Reader available
-
-        Returns
-        -------
-        reader : BinaryIO
-        """
-        if isinstance(target, BinaryIO):
-            return target
-        elif hasattr(target, 'read'):
-            return BinaryIO.adapter(target)
-        elif not target:
-            return BinaryIO()
-        else:
-            return BinaryIO(target)
-    writer = reader
+            last_data = self.content[self.position + len(value):]
+            result = first_data + value + last_data
+        
+        return result
 
 
-class BinaryIOAdapter(BinaryIO):
-    """Adapter for file handles
-
-    Allows all of the BinaryIO methods to be used without a stringio object
-    """
-    def __init__(self, handle):
-        BinaryIO.__init__(self)
-        self.handle = handle
-
-    def read(self, size=-1):
-        return self.handle.read(size)
-
-    def write(self, value):
-        self.handle.write(value)
-
-    def readline(self):
-        # Faster to use underlying method
-        return self.handle.readline()
-
-    def seek(self, offset, whence=0):
-        position = self.tell()
-        self.handle.seek(offset, whence)
-        return SeekReturn(self, position)
-
-    def tell(self):
-        return self.handle.tell()
+    def write(self, mode: StructModes, value: int) -> None:
+        self.content = self.transform_data(mode.pack(value))
+        self.position += calcsize(mode.format)
 
 
-class BoundIO(object):
-    """Binds a binary_io to an object so that all of its functions use obj
-    directly"""
-    def __init__(self, obj, binary_io):
-        self.handle = binary_io
-        self.obj = obj
+    def write_bytes(self, string: bytes) -> None:
+        # Search for a \0, if not present then add it at the end
+        null_index = string.find(b'\0')
+        if null_index == -1:
+            null_index = len(string)
+            string += b'\0'
+        
+        self.content = self.transform_data(string)
+        self.position += len(string)
 
-    def __getattr__(self, name):
-        attr = super(BoundIO, self).__getattr__(name)
-        if name[:4] == 'read':
-            def bound_read_wrapper(target, *args, **kwargs):
-                setattr(self.obj, target, attr(*args, **kwargs))
-            return bound_read_wrapper
-        elif name[:5] == 'write':
-            def bound_write_wrapper(target, *args, **kwargs):
-                attr(getattr(self.obj, target), *args, **kwargs)
-            return bound_write_wrapper
-        else:
-            return attr
+
+    def write_str(self, string: str) -> None:
+        # Search for a \0, if not present then add it at the end
+        null_index = string.find('\0')
+        if null_index == -1:
+            null_index = len(string)
+            string += '\0'
+
+        bytes_string = string.encode('utf-8')
+
+        self.content = self.transform_data(bytes_string)
+        self.position += len(bytes_string)
+
+    
+    def align(self, byte_number: int, value: bytes = b'\x00') -> None:
+        # Check if value is a single byte
+        if len(value) > 1:
+            value = value[:1]
+
+        bytes_to_write = value * (self.position % byte_number)
+        self.content = self.transform_data(bytes_to_write)
+        self.position += len(bytes_to_write)
+
+
+    def getvalue(self) -> bytes:
+        return self.content
+    
+
+    def seek(self, position: int) -> None:
+        self.position = position
+

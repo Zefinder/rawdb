@@ -9,37 +9,24 @@ from rawdb.event import INSERT_EVENT_NAME, INVALID_EVENT_NAME, REMOVE_EVENT_NAME
 from rawdb.generic.restriction import Restriction
 
 class Editable(object, metaclass=ABCMeta):
-    """Editable interface
+    """
+    Creates an editable object based on an AtomicStruct.
+    The goal is to define a usable struct and to restrict
+    all fields. 
 
-    Attributes
-    ----------
-    keys : dict
-        Mapping of restrictions
-
-    Methods
-    -------
-    restrict
-        Set restrictions on an attribute
-    to_dict
-        Generate a dict for this object
-    to_json
-        Generate a JSON string for this object
-
-    Events
-    ------
-    set : (name, value)
-        Fired before a restricted attribute is changed
-    insert : (name, index, value)
-        Fired before an item is inserted into a collection
-    remove : (name, index, value)
-        Fired before an item is removed from a collection
-    invalid : (method, *args)
-        Fired if an invalid value is passed. The rest of the event signature
-        looks matches the method's arguments
+    TODO Add events
     """
     keys: dict[str, tuple[Any, Restriction | None]]
 
     def __init__(self, *args: Any) -> None:
+        """
+        Creates an editable object based on an AtomicStruct.
+        The goal is to define a usable struct and to restrict
+        all fields. 
+
+        Args:
+            *args (Any): Arguments to pass to the define method 
+        """
         self.keys = OrderedDict()
         
         # Define struct using the abstract method

@@ -13,13 +13,6 @@ class RestrictionError(Exception):
 class Restriction(object):
     """
     Restriction definition on an attribute's value and/or type
-
-    Methods
-    -------
-    restrict
-        Add restriction
-    validate
-        Check that a value is valid
     """
 
     restriction_name: str
@@ -27,6 +20,12 @@ class Restriction(object):
 
 
     def __init__(self, restriction_name: str, *validators: tuple[str, Callable[[Any], bool]]) -> None:
+        """
+        Restriction definition on an attribute's value and/or type
+
+        Args:
+            restriction_name (str): Restriction's name
+        """
         self.restriction_name = restriction_name
         self.validators = {}
 
@@ -42,28 +41,27 @@ class Restriction(object):
             validator ((Editable, Any) -> bool): Validator method
 
         Examples:
-        >>> restriction = Restriction('test')
-        >>> def value_is_even(editable, value):
-                return value % 2
-        >>> restriction.restrict('value_is_even', value_is_even)
-        >>> restriction.validate(2)
-        >>> restriction.validate(3)
-        Traceback (most recent call last):
-            ...
-        RestrictionError: test: Value <3> does not respect restriction "value_is_even"
-        >>> restriction.restrict('minimum 7', lambda value: value >= 7)
-        >>> restriction.validate(8)
-        >>> restriction.validate(4)
-        Traceback (most recent call last):
-            ...
-        RestrictionError: test: Value <4> does not respect restriction "minimum 7"
-        >>> restriction.validate(9)
-        Traceback (most recent call last):
-            ...
-        RestrictionError: test: Value <9> does not respect restriction "value_is_even"
-        >>>
+            >>> restriction = Restriction('test')
+            >>> def value_is_even(editable, value):
+                    return value % 2
+            >>> restriction.restrict('value_is_even', value_is_even)
+            >>> restriction.validate(2)
+            >>> restriction.validate(3)
+            Traceback (most recent call last):
+                ...
+            RestrictionError: test: Value <3> does not respect restriction "value_is_even"
+            >>> restriction.restrict('minimum 7', lambda value: value >= 7)
+            >>> restriction.validate(8)
+            >>> restriction.validate(4)
+            Traceback (most recent call last):
+                ...
+            RestrictionError: test: Value <4> does not respect restriction "minimum 7"
+            >>> restriction.validate(9)
+            Traceback (most recent call last):
+                ...
+            RestrictionError: test: Value <9> does not respect restriction "value_is_even"
+            >>>
         """
-
         self.validators[name] = validator
 
 

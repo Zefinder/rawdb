@@ -1,7 +1,6 @@
 import re
 from rawdb.util.attr import temporary_attr, AttrDict
 from rawdb.util.cache import cached_property
-from rawdb.util.io import BinaryIO
 
 # TODO This needs to be put somewhere but not here... 
 
@@ -85,5 +84,5 @@ def natsort_key(key):
     return [get_val(chunk) for chunk in re.split('([0-9]+)', key)]
 
 
-__all__ = ['cached_property', 'temporary_attr', 'AttrDict', 'BinaryIO',
+__all__ = ['cached_property', 'temporary_attr', 'AttrDict',
            'lget', 'gcf', 'natsort_key']

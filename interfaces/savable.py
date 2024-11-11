@@ -1,6 +1,6 @@
 from abc import ABCMeta, abstractmethod
 
-from rawdb.util.io import BinaryIO
+from rawdb.interfaces.binary_io import IOHandler
 
 
 class Savable(metaclass=ABCMeta):
@@ -9,14 +9,14 @@ class Savable(metaclass=ABCMeta):
     """
 
     @abstractmethod
-    def save(self, writer: BinaryIO) -> BinaryIO:
+    def save(self, writer: IOHandler) -> IOHandler:
         """
         Saves the object in the writer and returns it.
 
         Args:
-            writer (BinaryIO): Writer to write to 
+            writer (IOHandler): Writer to write to 
 
         Returns:
-            BinaryIO: The same input writer but with the object in it
+            IOHandler: The same input writer but with the object in it
         """
         pass

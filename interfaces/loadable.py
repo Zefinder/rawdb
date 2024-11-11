@@ -1,6 +1,6 @@
 from abc import ABCMeta, abstractmethod
 
-from rawdb.util.io import BinaryIO
+from rawdb.interfaces.binary_io import IOHandler
 
 
 class Loadable(metaclass=ABCMeta):
@@ -9,11 +9,11 @@ class Loadable(metaclass=ABCMeta):
     """
 
     @abstractmethod
-    def load(self, reader: BinaryIO) -> None:
+    def load(self, reader: IOHandler) -> None:
         """
         Loads what is in the reader in the object
 
         Args:
-            reader (BinaryIO): Reader to read from 
+            reader (IOHandler): Reader to read from 
         """
         pass

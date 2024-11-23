@@ -510,7 +510,7 @@ class AtomicStructBuilder(object):
 
         Args:
             name (str): Array's name
-            type_name (FieldTypes): Custom type's name
+            type_name (str): Custom type's name
             dimension (int, optional): Array's dimension. Defaults to 1.
             lengths (tuple[int, ...], optional): Array's length per dimension. Defaults to (1,).
         """
@@ -541,6 +541,29 @@ class AtomicStructBuilder(object):
         """
         self.fields[name] = AtomicFieldPointer(AtomicDataField(name=name,
                                                                _type=_type))
+        return self
+    
+
+    def add_pointer_custom(self, name: str, type_name: str) -> 'AtomicStructBuilder':
+        """
+        Adds a pointer to the struct.
+
+        For example:
+
+        >>> example_struct = AtomicStructBuilder().add_pointer_field('name', FieldTypes.char).build('example')
+        >>> example.describe()
+
+        Output:
+            struct example {
+                char *name;
+            };
+
+        Args:
+            name (str): Pointer's name
+            type_name (str): Pointer's type
+        """
+        self.fields[name] = AtomicFieldPointer(AtomicDataField(name=name,
+                                                               _type=type_name))
         return self
 
 

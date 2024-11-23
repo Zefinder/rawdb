@@ -54,13 +54,15 @@ class IOHandler(metaclass=ABCMeta):
 
 
     @abstractmethod
-    def read_bytes(self) -> bytes:
+    def read_bytes(self, length: int) -> bytes:
         """
-        Reads a string from the binary. Strings MUST end with the
-        '\\0' character. 
+        Reads raw data from the binary.
+
+        Args:
+            length (int): Data length
 
         Returns:
-            bytes: The string in bytes representation
+            bytes: The raw data
         """
         pass
 
@@ -91,14 +93,13 @@ class IOHandler(metaclass=ABCMeta):
 
 
     @abstractmethod
-    def write_bytes(self, string: bytes) -> None:
+    def write_bytes(self, rawdata: bytes) -> None:
         """
-        Writes a byte string to the buffer. A '\\0' will be added at the
-        end of the string, so you don't need to put it. Replaces the bytes 
+        Writes rawdata to the buffer. Replaces the bytes 
         in place.
 
         Args:
-            string (bytes): The string to write (without the ending '\\0')
+            rawdata (bytes): Raw data
         """
         pass
 

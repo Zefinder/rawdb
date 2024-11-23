@@ -38,21 +38,14 @@ class IOFileHandler(IOHandler):
         # Default value is 0 (char \0)
         return 0
 
-    def read_bytes(self) -> bytes:
+    def read_bytes(self, length: int) -> bytes:
         if self.readable:
             with open(self.filename, 'br') as file:
                 # Seek to position
                 file.seek(self.position)
 
-                result = b''
-                read_char = file.read(1)
-                self.position += 1
-
-                while read_char != b'\0':
-                    result += read_char
-                    read_char = file.read(1)
-                    self.position += 1
-
+                result = file.read(length)
+                self.position += length
                 return result
             
         # Default value is b'\0'
@@ -110,18 +103,12 @@ class IOFileHandler(IOHandler):
                 self.position += calcsize(mode.format)
 
 
-    def write_bytes(self, string: bytes) -> None:
-        if self.writable:
-            # Search for a \0, if not present then add it at the end
-            null_index = string.find(b'\0')
-            if null_index == -1:
-                null_index = len(string)
-                string += b'\0'
-            
-            new_data = self.transform_data(string)
+    def write_bytes(self, rawdata: bytes) -> None:
+        if self.writable:            
+            new_data = self.transform_data(rawdata)
             with open(self.filename, 'bw') as file:
                 file.write(new_data)
-                self.position += len(string)
+                self.position += len(rawdata)
 
 
     def write_str(self, string: str) -> None:
@@ -200,11 +187,10 @@ class IOBytesHandler(IOHandler):
         return result
     
 
-    def read_bytes(self) -> bytes:
+    def read_bytes(self, length: int) -> bytes:
         result = b''
-        null_index = self.content.find(b'\0', self.position)
-        result = self.content[self.position:null_index]
-        self.position = null_index
+        result = self.content[self.position:self.position + length]
+        self.position += length
 
         return result
 
@@ -238,15 +224,9 @@ class IOBytesHandler(IOHandler):
         self.position += calcsize(mode.format)
 
 
-    def write_bytes(self, string: bytes) -> None:
-        # Search for a \0, if not present then add it at the end
-        null_index = string.find(b'\0')
-        if null_index == -1:
-            null_index = len(string)
-            string += b'\0'
-        
-        self.content = self.transform_data(string)
-        self.position += len(string)
+    def write_bytes(self, rawdata: bytes) -> None:
+        self.content = self.transform_data(rawdata)
+        self.position += len(rawdata)
 
 
     def write_str(self, string: str) -> None:

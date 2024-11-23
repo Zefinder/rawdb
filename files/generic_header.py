@@ -47,8 +47,7 @@ class GenericHeader(Editable, Loadable, Savable):
                .add_field('unused', FieldTypes.uint32_t, default=0x0100FEFF)\
                .add_field('section_size', FieldTypes.uint32_t)\
                .add_field('header_size', FieldTypes.uint16_t)\
-               .add_field('subsection_number', FieldTypes.uint16_t)\
-               .build('generic_header')
+               .add_field('subsection_number', FieldTypes.uint16_t)
         
     
     def load(self, reader: IOHandler) -> None:
@@ -66,13 +65,3 @@ class GenericHeader(Editable, Loadable, Savable):
         writer.write(StructModes.uint16, self.header_size)
         writer.write(StructModes.uint16, self.subsection_number)
         return writer
-    
-
-    def getvalue(self) -> bytes:
-        output = IOBytesHandler()
-        output.write(StructModes.uint32, self.magic_id)
-        output.write(StructModes.uint32, self.unused)
-        output.write(StructModes.uint32, self.section_size)
-        output.write(StructModes.uint16, self.header_size)
-        output.write(StructModes.uint16, self.subsection_number)
-        return output.getvalue() 

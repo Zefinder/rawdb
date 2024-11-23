@@ -180,10 +180,17 @@ class Editable(object, metaclass=ABCMeta):
         if field_type == str:
             restriction.restrict('field_type', lambda value: isinstance(value, str))
             value = ''
+        elif isinstance(pfield.atomic_data_field, AtomicArrayField):
+            restriction.restrict('field_type', lambda value: isinstance(value, list))
         elif field_type is not None:
             restriction.restrict('field_type', lambda arr: all(isinstance(value, field_type) for value in arr))
 
-        self.keys[pfield.name[1:]] = (value, restriction)
+        name = pfield.name[1:]
+        if '(' in name:
+            # Pointer of array
+            name = name[1:-1]
+
+        self.keys[name] = (value, restriction)
 
 
     def __register_data_field(self, data_field: AtomicDataField) -> None:

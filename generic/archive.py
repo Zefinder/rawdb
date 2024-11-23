@@ -93,7 +93,7 @@ class Archive(object, metaclass=ABCMeta):
         return self.files.pop(index)
         
 
-    def export(self, archive_name: str, mode: str = 'w') -> None:
+    def export_zip(self, archive_name: str, mode: str = 'w') -> None:
         """
         Exports this object to a zip archive containing added files.
 
